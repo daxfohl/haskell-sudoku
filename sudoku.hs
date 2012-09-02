@@ -138,4 +138,4 @@ elimCount :: Grid -> Int
 elimCount g = V.foldl (\i p -> i - popCount p) 15625 g
 
 x = runSi grid
-y = teLr x
+y = runTe grid
