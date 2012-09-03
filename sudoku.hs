@@ -70,14 +70,32 @@ allRegions g = concat [[Row i, Col i, Sq i] | i <- [0..sideLen g - 1]]
 containsVal :: PossSet -> Value -> Bool
 containsVal poss value = poss .&. (shift 1 value) /= 0
 
-eliminate :: Grid -> Index -> PossSet -> Grid
-eliminate g i elim = 
+eliminatex :: Grid -> Index -> PossSet -> Grid
+eliminatex g i elim = 
     let p1 = g!i
         p2 = p1 .&. complement elim
         g2 = g // [(i, p2)]
         cells = brothers g i
         eliminateAll = foldl (\gridAcc x -> eliminate gridAcc x p2) g2 cells
-    in  if p2 == p1 then g else if (solved p2) then eliminateAll else g2
+    in  if p2 == p1 then g else if solved p2 then eliminateAll else g2
+
+eliminate :: Grid -> Index -> PossSet -> Grid
+eliminate g i elim = 
+    let p1 = g!i
+        p2 = p1 .&. complement elim
+        g2 = g // [(i, p2)]
+    in  if p2 == p1 then g else if (solved p2) then (isolate g2 i) else g2
+    
+isolate :: Grid -> Index -> Grid
+isolate g i = 
+    let 
+        p = g!i
+        bros = brothers g i
+        newVal bro = (g!bro) .&. complement p
+        updates = map (\bro -> (bro, newVal bro)) bros
+        g2 = g // updates
+        newIsos = filter (\bro -> (not (solved (g!bro))) && (solved (newVal bro))) bros
+    in  foldl isolate g2 newIsos
 
 lr :: Grid -> Grid
 lr g = foldl lr' g $ allRegions g
@@ -139,3 +157,7 @@ elimCount g = V.foldl (\i p -> i - popCount p) 15625 g
 
 x = runSi grid
 y = runTe grid
+
+main = do
+	print y
+	print $ elimCount y
