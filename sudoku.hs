@@ -10,8 +10,8 @@ data Region = Row Int | Col Int | Sq Int deriving(Show)
 line = "0 0 12 0 0 0 21 0 0 11 0 0 0 7 0 0 0 0 3 17 0 0 9 0 24 0 0 0 0 17 0 0 18 0 0 11 0 0 0 0 0 22 0 0 0 1 13 20 0 0 4 1 2 8 9 0 0 0 3 0 0 0 24 20 0 0 6 0 0 0 0 0 0 22 11 21 22 24 23 0 0 4 10 5 0 0 0 9 18 1 0 0 15 0 0 3 8 0 0 0 11 0 0 7 0 24 6 0 2 23 17 4 0 0 12 0 0 0 0 0 0 0 15 0 0 0 0 0 0 0 17 9 21 0 0 0 15 0 19 0 0 0 0 18 0 0 0 0 16 14 0 0 0 5 0 4 22 11 0 10 0 0 0 16 17 0 0 12 0 1 13 9 25 0 8 0 0 6 0 3 0 18 1 0 0 0 0 14 21 7 0 0 0 9 23 19 0 0 2 0 0 9 0 17 8 0 15 25 0 0 12 0 0 4 0 0 2 0 0 11 20 0 21 0 0 0 13 7 0 0 23 3 0 0 0 0 0 20 0 0 0 0 0 0 10 0 18 0 4 22 13 0 18 0 5 2 0 0 0 0 0 0 4 0 0 3 0 0 0 8 0 1 0 7 23 0 0 0 16 23 0 0 7 0 0 1 25 0 0 5 0 0 0 0 0 24 0 14 0 0 0 0 0 11 25 0 0 12 0 0 0 0 0 23 21 20 0 14 4 0 0 0 0 0 0 8 12 20 19 0 0 0 0 23 0 0 0 0 0 11 24 0 0 0 6 0 0 17 10 0 14 2 0 0 0 0 8 0 19 25 6 16 0 3 9 11 0 5 0 12 0 0 0 20 15 12 17 0 0 0 0 0 5 0 21 18 0 6 0 0 2 9 0 0 24 4 0 10 0 20 2 0 0 1 0 0 0 0 0 3 0 0 0 0 25 19 0 0 21 22 16 0 0 24 0 20 0 0 24 16 0 10 0 0 0 0 0 17 1 0 0 0 23 0 5 18 25 0 3 0 0 8 0 0 14 25 17 0 0 0 24 9 19 5 0 6 0 0 20 0 0 11 23 1 0 0 0 11 25 6 20 1 0 0 7 0 0 16 14 0 0 0 0 10 15 17 12 0 0 21 22 23 0 0 0 21 0 16 0 0 0 8 0 0 18 7 0 24 0 0 0 14 13 0 17 0 7 0 15 0 0 20 0 0 6 0 24 0 2 14 13 0 0 11 3 0 0 5 0 25 3 21 0 10 0 7 25 14 15 19 0 0 0 9 0 22 0 6 0 0 2 0 0 0 0 9 0 0 0 0 18 5 0 0 0 23 19 15 0 10 0 0 1 0 0 0 0 11 0 0 0 16 0 0 20 3 0 24 13 4 0 0 0 17 0 0 0 0 0 25 0 21 12 15 0"
 grid = toGrid $ words line
 
-foldlInt :: (a -> b -> Int -> a) -> a -> [b] -> a
-foldlInt f init seq = fst $ foldl (\(agg, i) next -> (f agg next i, i+1)) (init, 0) seq
+foldl'Int :: (a -> b -> Int -> a) -> a -> [b] -> a
+foldl'Int f init seq = fst $ foldl' (\(agg, i) next -> (f agg next i, i+1)) (init, 0) seq
 
 intSqRt :: Int -> Int
 intSqRt = truncate . sqrt . fromIntegral
@@ -32,7 +32,7 @@ solvedG :: Grid -> Index -> Bool
 solvedG g i = solved (g!i)
 
 toGrid :: [String] -> Grid
-toGrid words = foldlInt reduce empty arr
+toGrid words = foldl'Int reduce empty arr
 	where
 		arr = map read words :: [Int]
 		sidelen = intSqRt $ length $ arr
@@ -76,7 +76,7 @@ eliminatex g i elim =
         p2 = p1 .&. complement elim
         g2 = g // [(i, p2)]
         cells = brothers g i
-        eliminateAll = foldl (\gridAcc x -> eliminate gridAcc x p2) g2 cells
+        eliminateAll = foldl' (\gridAcc x -> eliminate gridAcc x p2) g2 cells
     in  if p2 == p1 then g else if solved p2 then eliminateAll else g2
 
 eliminate :: Grid -> Index -> PossSet -> Grid
@@ -95,13 +95,13 @@ isolate g i =
         updates = map (\bro -> (bro, newVal bro)) bros
         g2 = g // updates
         newIsos = filter (\bro -> (not (solved (g!bro))) && (solved (newVal bro))) bros
-    in  foldl isolate g2 newIsos
+    in  foldl' isolate g2 newIsos
 
 lr :: Grid -> Grid
-lr g = foldl lr' g $ allRegions g
+lr g = foldl' lr' g $ allRegions g
     where
       lr' :: Grid -> Region -> Grid
-      lr' g region = foldl (lr'' region) g [0..sideLen g - 1]
+      lr' g region = foldl' (lr'' region) g [0..sideLen g - 1]
       lr'' :: Region -> Grid -> Value -> Grid
       lr'' region g value = if lone then setCell g index value else g
         where
@@ -112,7 +112,7 @@ lr g = foldl lr' g $ allRegions g
           index = head containers
           
 si :: Grid -> Grid
-si g = foldl (\g (i,r) -> si' g r $ g!i) g [(i,r) | i <- [0..V.length g - 1], r <- intersections g i]
+si g = foldl' (\g (i,r) -> si' g r $ g!i) g [(i,r) | i <- [0..V.length g - 1], r <- intersections g i]
     where
       si' :: Grid -> Region -> PossSet -> Grid
       si' g region poss = if length limitedToPoss == popCount poss then g' else g
@@ -120,16 +120,16 @@ si g = foldl (\g (i,r) -> si' g r $ g!i) g [(i,r) | i <- [0..V.length g - 1], r 
             indexes = cells g region
             isLimitedToPoss i = g!i .|. poss == poss
             (limitedToPoss, notLimitedToPoss) = partition isLimitedToPoss indexes
-            g' = foldl (\g i -> eliminate g i poss) g notLimitedToPoss
+            g' = foldl' (\g i -> eliminate g i poss) g notLimitedToPoss
 
 isConsistent :: Grid -> Bool            
 isConsistent g = not $ V.elem 0 g
 
 te :: (Grid -> Grid) -> Grid -> Grid
-te f g = foldl te' g $ filter (not . solvedG g) [0..V.length g - 1]
+te f g = foldl' te' g $ filter (not . solvedG g) [0..V.length g - 1]
     where
         te' :: Grid -> Index -> Grid
-        te' g i = foldl te'' g $ filter (testBit poss) [0..sideLen g - 1]
+        te' g i = foldl' te'' g $ filter (testBit poss) [0..sideLen g - 1]
             where 
                 poss = g!i
                 te'' :: Grid -> Value -> Grid
@@ -153,7 +153,7 @@ teLr = te $ run lr
 runTe = runAll [teLr, si, lr]
 
 elimCount :: Grid -> Int
-elimCount g = V.foldl (\i p -> i - popCount p) 15625 g
+elimCount g = V.foldl' (\i p -> i - popCount p) 15625 g
 
 x = runSi grid
 y = runTe grid
